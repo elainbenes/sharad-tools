@@ -1,6 +1,9 @@
 # sharad-tools
 A set of MATLAB functions to perform various operations on data from the SHARAD instrument on the Mars Reconnaissance Orbiter
 
+This is an automated versionof the sharad-tools in the "master" branch. This branch automates the processes by so that pulse compression can be run on a directory of EDRs with no user input necessary. Currently, the appropriate reference chirp is determinined by using the average transmitter and receiver temps for a given track.
+
+
 anc_parse.m - Parses the ancilliary data table from the science data file, will output a matlab table of the ancilliary data from the function as well as writing the data to an excel spreadsheet.
 
 aux_parse.m - Parses the auxiliary data file, will output a matlab table of the auxiliary data from the function as well as writing the data to an excel spreadsheet.
