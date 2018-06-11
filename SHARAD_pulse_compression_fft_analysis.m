@@ -75,7 +75,7 @@ subplot 511
 plot((abs(chirp_freq)).^2);
 title('Chirp power spectrum');
 subplot 512
-plot((abs(returns_comp)).^2);
+plot((abs(returns_compl)).^2);
 title('Zero-padded power spectrum');
 subplot 513
 plot((abs(finalreturns_noShift)).^2);
