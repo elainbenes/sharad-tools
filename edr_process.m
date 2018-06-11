@@ -1,6 +1,6 @@
-function [ rdr,raw_returns ] = edr_process( edr,refchirp,length,mode,name )
+function [ rdr,raw_returns ] = edr_process( edr )
 
-%function [ rdr,raw_returns ] = edr_process( edr,refchirp,length,mode,name )
+%function [ rdr,raw_returns ] = edr_process( edr )
 %
 %   SHARAD Radar Data Parsing and Signal Processing Function
 %   Michael Christoffersen
@@ -11,7 +11,7 @@ function [ rdr,raw_returns ] = edr_process( edr,refchirp,length,mode,name )
 %
 %   edr (string) - path to EDR file
 %   refchirp (string) - path to reference chirp file
-%   length (integer) - length of (number of traces in) EDR file
+%   traces (integer) - traces of (number of traces in) EDR file
 %   mode (integer 1-21) - radar mode for data take (omit the "ss", only put a number)
 %   name (string) - desired name for the output .jpeg. Only put the first 
 %                   part of the desired name, the file extension will be added by the function 
@@ -25,6 +25,17 @@ function [ rdr,raw_returns ] = edr_process( edr,refchirp,length,mode,name )
 
 %n is number of presummed chirps in each trace (specific to mode)
 %r is bit resolution of raw data (specific to mode)
+
+%determine the traces of the radar line, and the instrument mode
+[traces,mode] = lbl_parse([erase(edr,'_s.dat'),'.lbl']);
+
+disp([traces,mode]);
+[auxdata] = aux_parse([erase(edr,'_s.dat'),'_a.dat'],traces);
+tx_avg = mean(auxdata(:,34));
+rx_avg = mean(auxdata(:,35));
+
+%
+
 switch mode;
     case 1
         n=32;
@@ -97,30 +108,41 @@ end
 
 %% Parse and Process Sharad Binary Data
 %Parse the science data file
-returns = edr_parse(edr,length,r); %use the last field in this command to specify how many traces to skip initially, leave it blank to skip none
-returns = edr_decompress(returns,n,r);
+returns = edr_parse(edr,traces,r); %use the last field in this command to specify how many traces to skip initially, leave it blank to skip none
 raw_returns = returns;
+disp('EDR parsed');
+returns = edr_decompress(returns,n,r);
+disp('EDR decompressed');
 
 %Parse the chirp and combine the real and complex parts
-chirp_freq = chirp_unpack(refchirp);
+chirp_freq = chirp_unpack(tx_avg,rx_avg);
+disp('Ref. chirp unpacked');
 
 %%
-%method from http://pds-geosciences.wustl.edu/mro/mro-m-sharad-3-edr-v1/mrosh_0003/calib/calinfo.txt
-returns = [returns,zeros(length,496)]; %zero padding the returns
-returns = edr_complex_mult(returns,length);
+%method from http://pds-geosciences.wustl.edu/mro/mro-m-sharad-3-edr-v1/mroffrsh_0003/calib/calinfo.txt
+returns = [returns,zeros(traces,(4096-3600))]; %zero padding the returns
+returns = edr_complex_mult(returns,traces);
+disp('EDR complex mult. complete');
 returns = (returns.');
-fftreturns = fft(returns);
+fftreturns = fft(returns);          %good through here
+disp('FFT');
+
+
 
 fftreturns = fftshift(fftreturns);
-fftreturns = fftreturns(2045:4092,:);
+%%disp('FFT shift');
+fftreturns = fftreturns(2045:4092,:);       %this is the subset Michael selects after performing fft-shift
+%fftreturns = fftreturns(1025:3072,:);
 chirp_freq = chirp_freq';
-for n=1:length
-     fftreturns(:,n) = fftreturns(:,n).*chirp_freq;
+for n=1:traces
+    fftreturns(:,n) = fftreturns(:,n).*chirp_freq;
 end
-
+disp('Here');
 finalreturns = ifft(fftshift(fftreturns));
-rdr = finalreturns.';
-rgram(rdr,name);
+disp('IFFT');
+name = [erase(edr,'_s.dat'),'_rgram'];
+rgram(finalreturns,name);
+
 
 end
 

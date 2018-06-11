@@ -1,10 +1,11 @@
 function [ rdr ] = rgram( A,name )
 %function [ B ] = rgram( A )
 %   Takes in matrix A of processed SHARAD returns and scales the values in
-%   each row to be between 0 and 1, based on the maximun and minimum values 
-%   in each row, the result is output as matrix B. Results can be displayed
+%   each column to be between 0 and 1, based on the maximun and minimum values 
+%   in each column, the result is output as matrix B. Results can be displayed
 %   as an image with the imshow() command. 
-A = abs(real(A))';
+A = abs(real(A));%find amplitude of each complex valued return
+disp('Amplitude computed');
 max_return = max(A);
 min_return = min(A);
 [i,j] = size(A);
@@ -16,10 +17,13 @@ for n=1:j
     B(:,n) = trace;
 end
 [i,j] = size(B);
-gram = imresize(B,[i,j/8]);
+gram2 = imresize(B,[i,j/8]);
+gram = B;
 [i,j] = size(gram);
+%imshow(gram);
+%imshow(gram2);
+imwrite(gram,['246001_2045_4092_shift2.jpg']);
+imwrite(gram2,['246001_2045_4092_shift2_compressed.jpg'])
 
-name = [name,'.jpg'];
-imwrite(gram,name);
 end
 

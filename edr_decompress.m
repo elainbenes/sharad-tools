@@ -39,8 +39,8 @@ if(args == 4)
     %Decompress SHARAD data - dynamic scaling
     anc = fopen(anc_file,'r','b');
     fseek(anc,56,'bof');
-    SDI_BIT_FIELD = fread(sciancdata, [length,1],'uint16',width-2);
-    for n=1:length(SDI_BIT_FIELD)
+    SDI_BIT_FIELD = fread(sciancdata, [traces,1],'uint16',width-2);
+    for n=1:traces(SDI_BIT_FIELD)
         if(SDI_BIT_FIELD(n) > 16)
             SDI_BIT_FIELD(n) = SDI_BIT_FIELD(n) - 16;
         elseif(SDI_BIT_FIELD(n) > 5)
