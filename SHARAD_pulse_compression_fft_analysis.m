@@ -1,10 +1,19 @@
-dt = (3/80)*10^(-6);
-fs = 1/dt;
-N = 4096;
+clc; clear all; close all;
+
+
+% dt = (3/80)*10^(-6);
+% fs = 1/dt;
+% N = 4096;
+% rl = 1/fs*N;
+
+
+%construct frequency spectrum for reference chirp
+fs = ((80/3)*10^(6))/4096;
+N = 2048;
+dt = 1/fs;
 rl = 1/fs*N;
 f = zeros(1,N);
-time_vec = 0:dt:4095*dt;
-
+time_vec = 0:dt:(N-1)*dt;
 
 for i = 1:N-1
     f(i+1) = i/rl;
@@ -14,6 +23,25 @@ end
 for k = 1:(N/2)-1
   f((N/2)+k+1)=-f((N/2)-k+1);
 end
+
+
+
+%construct frequency spectrum for zero padded reference chirp
+N_interp = 4096;
+rl_interp = 1/fs*N_interp;
+f_interp = zeros(1,N_interp);
+time_vec_interp = 0:dt:(N_interp-1)*dt;
+
+for i = 1:N_interp-1
+    f_interp(i+1) = i/rl_interp;
+end
+
+%account for hermitian symmetry 
+for k = 1:(N_interp/2)-1
+  f_interp((N_interp/2)+k+1)=-f_interp((N_interp/2)-k+1);
+end
+
+
 
 
 %% select the appropriate reference chirp based on input temps
@@ -29,59 +57,54 @@ rx_avg = randi([-40,60]);
 chirp_freq = chirp_unpack(tx_avg,rx_avg);
 
 
-
 %% test pulse compression of reference chirp with itself. this should produce a nice response
+chirp_t = ifft(chirp_freq); %convert chirp back to time domain
 
-returns_pad = [chirp_freq,zeros(1,(4096-length(chirp_freq)))]; %zero padding the returns\\
+chirp_pad = [chirp_t,zeros(1,(4096-length(chirp_t)))]; %zero pad time domain chirp
 
-chirp_freq = chirp_freq';
+fftreturns = fftshift(fft(chirp_pad))';    %frequency domain version of shifted chirp
 
-returns_compl = edr_complex_mult(returns_pad,1);
+fftreturns_subset = fftreturns(1025:3072,1);    %indices [2050:4096] corresponds to frequencies -6 2/3 to 6 2/3 MHz after complex mult.(0 to 13 1/3 MHz pre-shift)
+dechirp = fftreturns_subset.*chirp_freq';
 
-fftreturns_noShift = fft(returns_compl);
-fftreturns_noShift_subset = fftreturns_noShift(1025:3072,:);
-range_compress_noShift(:,1) = fftreturns_noShift_subset(:,1).*chirp_freq;
-finalreturns_noShift = ifft((range_compress_noShift));
-
-fftreturns_noShift_subset_flip = fftreturns_noShift([2050:3073,1025:2048],:); 
-range_compress_noShift_flip(:,1) = fftreturns_noShift_subset_flip(:,1).*chirp_freq;
-finalreturns_noShift_flip = ifft((range_compress_noShift_flip));
-
-fftreturns_shift = fftshift(fft(returns_compl));
-fftreturns_shift_subset = fftreturns_shift(1025:3072,:);
-range_compress_shift(:,1) = fftreturns_shift_subset(:,1).*chirp_freq;
-finalreturns_shift = ifft((range_compress_shift));
+finalreturns = ifft(flipud(dechirp));
 
 
-
-%% figure
-close all
+%%
+figure
 subplot 211
-plot(f./1e6)
+plot(f./1e3)
 title('Frequency spectrum')
 xlabel('frame')
-ylabel('frequency [MHz]')
+ylabel('frequency [kHz]')
+
 subplot 212
-plot(fftshift(f)./1e6)
+plot(fftshift(f)./1e3)
 title('Shifted frequency spectrum')
 xlabel('frame')
-ylabel('frequency [MHz]')
+ylabel('frequency [kHz]')
 
 
 
 
 figure
-subplot 511
-plot((abs(chirp_freq)).^2);
-title('Chirp power spectrum');
-subplot 512
-plot((abs(returns_compl)).^2);
-title('Zero-padded power spectrum');
-subplot 513
-plot((abs(finalreturns_noShift)).^2);
-title('Range compressed output of non-shifted spectrum');
-subplot 514
-plot((abs(finalreturns_shift)).^2);
-title('Range compressed output of shifted spectrum');
-subplot 515
-plot((abs(finalreturns_noShift_flip)).^2);
+subplot 311
+plot(time_vec, chirp_t), hold on;
+plot(time_vec, finalreturns);
+legend('chirp','dechirp');
+xlabel('time [s]');
+ylabel('modulus');
+
+subplot 312
+plot(fftshift(f), chirp_freq), hold on;
+plot(fftshift(f), dechirp);
+legend('chirp','dechirp');
+xlabel('frequency [Hz]');
+ylabel('modulus');
+
+subplot 313
+plot(fftshift(f), abs(chirp_freq).^2), hold on;
+plot(fftshift(f), abs(dechirp).^2);
+legend('chirp','dechirp');
+xlabel('frequency [Hz]');
+ylabel('amplitude');
